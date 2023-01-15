@@ -71,12 +71,24 @@ struct TraceResult
     int steps; // flags bit 1:   surface condition:      true if distance to surface is small < error threshold
 };
 
+#ifndef PRIMARY_MAXITER
 #define PRIMARY_MAXITER 1024
+#endif
+
+#ifndef PRIMARY_MAXDIST
 #define PRIMARY_MAXDIST 500.
-#define SECONDARY_EPSILON 0.01
+#endif
+
+#ifndef SECONDARY_MAXITER
 #define SECONDARY_MAXITER 40
-#define SECONDARY_MINDIST 0.01
+#endif
+
+#ifndef SECONDARY_MAXDIST
 #define SECONDARY_MAXDIST 40.
+#endif
+
+#define SECONDARY_EPSILON 0.01
+#define SECONDARY_MINDIST 0.01
 #define SECONDARY_NOFFSET 0.01
 
 // bdf_trace or sdf_trace

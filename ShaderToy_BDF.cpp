@@ -37,6 +37,11 @@ namespace {
     const char* kSceneStr = "SCENE";
     const char* kTraceStr = "TRACE";
     const char* kShadowStr = "SHADOW";
+    const char* kPrimaryMaxIterStr = "PRIMARY_MAXITER";
+    const char* kPrimaryMaxDistStr = "PRIMARY_MAXDIST";
+    const char* kSecondaryMaxIterStr = "SECONDARY_MAXITER";
+    const char* kSecondaryMaxDistStr = "SECONDARY_MAXDIST";
+
     Gui::RadioButtonGroup kSceneRBs = { {0,"Blobs", false}, {1,"Primitives", true} };
     static const std::string kSceneDFs_sdf[] = { "sdf", "sdf2" };
     static const std::string kSceneDFs_bdf[] = { "bdf", "bdf2" };
@@ -83,12 +88,28 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
         changed |= settingsGroup.radioButtons(kShadowRBs, shadowID);
         ImGui::PopID();
 
+        static int primaryMaxIter = 1024;
+        static float primaryMaxDist = 500.0f;
+        changed |= ImGui::SliderInt(kPrimaryMaxIterStr, &primaryMaxIter, 1, 1024);
+        changed |= ImGui::SliderFloat(kPrimaryMaxDistStr, &primaryMaxDist, 1.0f, 1024.0f);
+
+        static int secondaryMaxIter = 40;
+        static float secondaryMaxDist = 40.0f;
+        changed |= ImGui::SliderInt(kSecondaryMaxIterStr, &secondaryMaxIter, 1, 1024);
+        changed |= ImGui::SliderFloat(kSecondaryMaxDistStr, &secondaryMaxDist, 1.0f, 1024.0f);
+
         if (changed) {
             mpMainPass->addDefine("SCENE_SDF", kSceneDFs_sdf[ sceneID ]);
             mpMainPass->addDefine("SCENE_BDF", kSceneDFs_bdf[ sceneID ]);
             
             mpMainPass->addDefine(kTraceStr, kTraceRBs[traceID].label);
             mpMainPass->addDefine(kShadowStr, kShadowRBs[shadowID].label);
+
+            mpMainPass->addDefine(kPrimaryMaxIterStr, std::to_string(primaryMaxIter));
+            mpMainPass->addDefine(kPrimaryMaxDistStr, std::to_string(primaryMaxDist));
+
+            mpMainPass->addDefine(kSecondaryMaxIterStr, std::to_string(secondaryMaxIter));
+            mpMainPass->addDefine(kSecondaryMaxDistStr, std::to_string(secondaryMaxDist));
         }
 
         settingsGroup.release();
