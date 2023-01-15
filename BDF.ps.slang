@@ -88,6 +88,14 @@ struct TraceResult
 #define SHADOW no_shadow
 #endif
 
+#ifndef SCENE_SDF
+#define SCENE_SDF sdf
+#endif
+
+#ifndef SCENE_BDF
+#define SCENE_BDF bdf
+#endif
+
 static const float pi = 3.1415926535897932384626433832795;
 static const vec3 EyeStartPosition = vec3(-3, 1, 5);
 
@@ -320,7 +328,8 @@ float bdf2(vec3 p)
 vec3 normal(const in vec3 p)
 {
     const vec2 eps0 = vec2(0.01, 0);
-    return normalize(vec3(sdf(p + eps0.xyy), sdf(p + eps0.yxy), sdf(p + eps0.yyx)) - vec3(sdf(p - eps0.xyy), sdf(p - eps0.yxy), sdf(p - eps0.yyx)));
+    return normalize(vec3(SCENE_SDF(p + eps0.xyy), SCENE_SDF(p + eps0.yxy), SCENE_SDF(p + eps0.yyx)) -
+                     vec3(SCENE_SDF(p - eps0.xyy), SCENE_SDF(p - eps0.yxy), SCENE_SDF(p - eps0.yyx)));
 }
 
 TraceResult sdf_trace(in Ray ray, in SphereTraceDesc params)
@@ -329,7 +338,7 @@ TraceResult sdf_trace(in Ray ray, in SphereTraceDesc params)
     float d;
     do
     {
-        d = sdf(ray.P + ret.T * ray.V);
+        d = SCENE_SDF(ray.P + ret.T * ray.V);
         ret.T += d;
         ++ret.steps;
     } while (ret.T < ray.Tmax && // Stay within bound box
@@ -347,7 +356,7 @@ TraceResult bdf_trace(in Ray ray, in SphereTraceDesc params)
     float d;
     do
     {
-        d = bdf(ray.P + ret.T * ray.V);
+        d = SCENE_BDF(ray.P + ret.T * ray.V);
         ret.T += 0.99 * d;
         ++ret.steps;
     } while (ret.T < ray.Tmax && // Stay within bound box
@@ -365,7 +374,7 @@ TraceResult bdf_shadow(in Ray ray, in SphereTraceDesc params)
     float d;
     do
     {
-        d = bdf(ray.P + ret.T * ray.V);
+        d = SCENE_BDF(ray.P + ret.T * ray.V);
         ret.T += 0.99 * d;
         ++ret.steps;
     } while (ret.T < ray.Tmax && // Stay within bound box
@@ -405,7 +414,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     if (bool(ret.flags & 1))
     { // background
         vec3 p = ray.P + ray.V * ray.Tmax;
-        float d = bdf(p) - sdf(p);
+        float d = SCENE_BDF(p) - SCENE_SDF(p);
         // = log(d);
         //d = 2.*atan(d);
         //fragColor.rgb += vec3(d,d,d*2.);
@@ -430,9 +439,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     }
     fragColor.rgb = Uncharted2ToneMapping(fragColor.rgb);
 }
-
-
-
 
 float4 main(noperspective float2 texC : TEXCOORD) : SV_TARGET
 {

@@ -34,8 +34,13 @@ FALCOR_EXPORT_D3D12_AGILITY_SDK
 #endif
 
 namespace {
+    const char* kSceneStr = "SCENE";
     const char* kTraceStr = "TRACE";
     const char* kShadowStr = "SHADOW";
+    Gui::RadioButtonGroup kSceneRBs = { {0,"Blobs", false}, {1,"Primitives", true} };
+    static const std::string kSceneDFs_sdf[] = { "sdf", "sdf2" };
+    static const std::string kSceneDFs_bdf[] = { "bdf", "bdf2" };
+
     Gui::RadioButtonGroup kTraceRBs = { {0,"sdf_trace", false}, {1,"bdf_trace", true} };
     Gui::RadioButtonGroup kShadowRBs = { {0,"sdf_trace", false}, {1,"bdf_trace", true}, {2,"no_shadow",true} };
 }
@@ -60,6 +65,12 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
     {
         bool changed = false;
 
+        static uint32_t sceneID = 0;
+        settingsGroup.text(kSceneStr);
+        ImGui::PushID(kSceneStr);
+        changed |= settingsGroup.radioButtons(kSceneRBs, sceneID);
+        ImGui::PopID();
+
         static uint32_t traceID = 0;
         settingsGroup.text(kTraceStr);
         ImGui::PushID(kTraceStr);
@@ -73,6 +84,9 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
         ImGui::PopID();
 
         if (changed) {
+            mpMainPass->addDefine("SCENE_SDF", kSceneDFs_sdf[ sceneID ]);
+            mpMainPass->addDefine("SCENE_BDF", kSceneDFs_bdf[ sceneID ]);
+            
             mpMainPass->addDefine(kTraceStr, kTraceRBs[traceID].label);
             mpMainPass->addDefine(kShadowStr, kShadowRBs[shadowID].label);
         }
