@@ -74,22 +74,24 @@ struct TraceResult
 #ifndef PRIMARY_MAXITER
 #define PRIMARY_MAXITER 1024
 #endif
-
 #ifndef PRIMARY_MAXDIST
 #define PRIMARY_MAXDIST 500.
 #endif
-
 #ifndef SECONDARY_MAXITER
 #define SECONDARY_MAXITER 40
 #endif
-
 #ifndef SECONDARY_MAXDIST
 #define SECONDARY_MAXDIST 40.
 #endif
-
-#define SECONDARY_EPSILON 0.01
+#ifndef SECONDARY_EPSILON
+#define SECONDARY_EPSILON 0.003
+#endif
+#ifndef SECONDARY_MINDIST
 #define SECONDARY_MINDIST 0.01
+#endif
+#ifndef SECONDARY_NOFFSET
 #define SECONDARY_NOFFSET 0.01
+#endif
 
 // bdf_trace or sdf_trace
 #ifndef TRACE

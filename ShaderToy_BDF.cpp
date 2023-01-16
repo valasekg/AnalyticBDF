@@ -41,6 +41,9 @@ namespace {
     const char* kPrimaryMaxDistStr = "PRIMARY_MAXDIST";
     const char* kSecondaryMaxIterStr = "SECONDARY_MAXITER";
     const char* kSecondaryMaxDistStr = "SECONDARY_MAXDIST";
+    const char* kSecondaryEpsilonStr = "SECONDARY_EPSILON";
+    const char* kSecondaryMinDistStr = "SECONDARY_MINDIST";
+    const char* kSecondaryNOffsetStr = "SECONDARY_NOFFSET";
 
     Gui::RadioButtonGroup kSceneRBs = { {0,"Blobs", false}, {1,"Primitives", true} };
     static const std::string kSceneDFs_sdf[] = { "sdf", "sdf2" };
@@ -68,7 +71,7 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
     auto settingsGroup = Gui::Group(pGui, "Settings", true);
     if (settingsGroup.open())
     {
-        bool changed = false;
+        static bool changed = true;
 
         static uint32_t sceneID = 0;
         settingsGroup.text(kSceneStr);
@@ -88,15 +91,21 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
         changed |= settingsGroup.radioButtons(kShadowRBs, shadowID);
         ImGui::PopID();
 
-        static int primaryMaxIter = 1024;
+        static int primaryMaxIter = 512;
         static float primaryMaxDist = 500.0f;
         changed |= ImGui::SliderInt(kPrimaryMaxIterStr, &primaryMaxIter, 1, 1024);
         changed |= ImGui::SliderFloat(kPrimaryMaxDistStr, &primaryMaxDist, 1.0f, 1024.0f);
 
         static int secondaryMaxIter = 40;
         static float secondaryMaxDist = 40.0f;
+        static float secondaryEpsilon = 0.003f;
+        static float secondaryMinDist = 0.01f;
+        static float secondaryNOffset = 0.01f;
         changed |= ImGui::SliderInt(kSecondaryMaxIterStr, &secondaryMaxIter, 1, 1024);
         changed |= ImGui::SliderFloat(kSecondaryMaxDistStr, &secondaryMaxDist, 1.0f, 1024.0f);
+        changed |= ImGui::SliderFloat(kSecondaryMinDistStr, &secondaryMinDist, 1e-15f, 1.f, "%.4f", 4.f);
+        changed |= ImGui::SliderFloat(kSecondaryEpsilonStr, &secondaryEpsilon, 1e-15f, 1.f, "%.4f", 4.f);
+        changed |= ImGui::SliderFloat(kSecondaryNOffsetStr, &secondaryNOffset, 1e-15f, 1.f, "%.4f", 4.f);
 
         if (changed) {
             mpMainPass->addDefine("SCENE_SDF", kSceneDFs_sdf[ sceneID ]);
@@ -110,7 +119,11 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
 
             mpMainPass->addDefine(kSecondaryMaxIterStr, std::to_string(secondaryMaxIter));
             mpMainPass->addDefine(kSecondaryMaxDistStr, std::to_string(secondaryMaxDist));
+            mpMainPass->addDefine(kSecondaryMinDistStr, std::to_string(secondaryMinDist));
+            mpMainPass->addDefine(kSecondaryEpsilonStr, std::to_string(secondaryEpsilon));
+            mpMainPass->addDefine(kSecondaryNOffsetStr, std::to_string(secondaryNOffset));
         }
+        changed = false;
 
         settingsGroup.release();
     }
