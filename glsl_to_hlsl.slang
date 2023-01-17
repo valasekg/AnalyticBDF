@@ -25,27 +25,20 @@
  # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **************************************************************************/
-#pragma once
-#include "Falcor.h"
 
-using namespace Falcor;
+#ifndef GLSL_TO_HLSL_SLANG
+#define GLSL_TO_HLSL_SLANG
 
-class ShaderToy_BDF : public IRenderer
+cbuffer ToyCB
 {
-public:
-    void onLoad(RenderContext* pRenderContext) override;
-    void onFrameRender(RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo) override;
-    void onShutdown() override;
-    void onResizeSwapChain(uint32_t width, uint32_t height) override;
-    bool onKeyEvent(const KeyboardEvent& keyEvent) override;
-    bool onMouseEvent(const MouseEvent& mouseEvent) override;
-    void onHotReload(HotReloadFlags reloaded) override;
-    void onGuiRender(Gui* pGui) override;
-
-private:
-    float                           mAspectRatio = 0;
-    FullScreenPass::SharedPtr       mpMainPass;
-    Camera::SharedPtr               mpCamera;
-    CameraController::SharedPtr     mpCameraController;
-    float4                          mpShadertoyMouse;
+    float2 iResolution;
+    float iTime;
+    float4 iMouse;
 };
+
+#define mix lerp
+#define vec2 float2
+#define vec3 float3
+#define vec4 float4
+
+#endif

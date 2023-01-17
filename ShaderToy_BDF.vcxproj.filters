@@ -9,4 +9,11 @@
   <ItemGroup>
     <ShaderSource Include="BDF.ps.slang" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="glsl_to_hlsl.slang" />
+    <None Include="SegmentTracing.slang" />
+    <None Include="common.slang" />
+    <None Include="bdf_primitives.slang" />
+    <None Include="sdf_primitives.slang" />
+  </ItemGroup>
 </Project>

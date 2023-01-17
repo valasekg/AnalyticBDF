@@ -24,6 +24,13 @@
   <ItemGroup>
     <ShaderSource Include="BDF.ps.slang" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="bdf_primitives.slang" />
+    <None Include="common.slang" />
+    <None Include="glsl_to_hlsl.slang" />
+    <None Include="sdf_primitives.slang" />
+    <None Include="SegmentTracing.slang" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C4993B38-991D-4ED3-8B72-9CAEE0700E37}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

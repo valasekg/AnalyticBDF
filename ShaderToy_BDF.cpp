@@ -49,8 +49,8 @@ namespace {
     static const std::string kSceneDFs_sdf[] = { "sdf", "sdf2" };
     static const std::string kSceneDFs_bdf[] = { "bdf", "bdf2" };
 
-    Gui::RadioButtonGroup kTraceRBs = { {0,"sdf_trace", false}, {1,"bdf_trace", true} };
-    Gui::RadioButtonGroup kShadowRBs = { {0,"sdf_trace", false}, {1,"bdf_trace", true}, {2,"no_shadow",true} };
+    Gui::RadioButtonGroup kTraceRBs = { {0,"sdf_trace", false}, {1,"bdf_trace", true},{2,"segment_trace",false},{3,"their_sphere_trace",false} };
+    Gui::RadioButtonGroup kShadowRBs = { {0,"sdf_trace", false}, {1,"bdf_trace", true}, {2,"no_shadow",true}};
 }
 
 void ShaderToy_BDF::onGuiRender(Gui* pGui)
@@ -154,10 +154,15 @@ void ShaderToy_BDF::onFrameRender(RenderContext* pRenderContext, const Fbo::Shar
     pRenderContext->clearFbo(pTargetFbo.get(), clearColor, 1.0f, 0, FboAttachmentType::All);
 
     // iResolution
-    float width = (float)pTargetFbo->getWidth();
-    float height = (float)pTargetFbo->getHeight();
-    mpMainPass["ToyCB"]["iResolution"] = float2(width, height);
-    mpMainPass["ToyCB"]["iGlobalTime"] = (float)gpFramework->getGlobalClock().getTime();
+    float2 resolution = float2((float)pTargetFbo->getWidth(), (float)pTargetFbo->getHeight());
+    mpMainPass["ToyCB"]["iResolution"] = resolution;
+    mpMainPass["ToyCB"]["iTime"] = (float)gpFramework->getGlobalClock().getTime();
+
+    static bool wasMouseButtonDownLastFrame = mpShadertoyMouse.z > 0;
+    mpShadertoyMouse.w = abs(mpShadertoyMouse.w) * (!wasMouseButtonDownLastFrame && mpShadertoyMouse.z > 0 ? 1.f : -1.f );
+    mpMainPass["ToyCB"]["iMouse"] = mpShadertoyMouse * float4(resolution, resolution);
+    wasMouseButtonDownLastFrame = mpShadertoyMouse.z > 0;
+
     mpMainPass["Camera"]["camEye"] = mpCamera->getPosition();
     mpMainPass["Camera"]["camInvViewProj"] = mpCamera->getInvViewProjMatrix();
 
@@ -179,6 +184,38 @@ bool ShaderToy_BDF::onKeyEvent(const KeyboardEvent& keyEvent)
 bool ShaderToy_BDF::onMouseEvent(const MouseEvent& mouseEvent)
 {
     mpCameraController->onMouseEvent(mouseEvent);
+    static float mIsAnyButtonDown = -1.f; // float
+    static float2 mMouseClickPos = float2(0);
+    static float2 mMouseDragPos = float2(0);
+
+    switch (mouseEvent.type)
+    {
+    case MouseEvent::Type::ButtonDown:
+        if (mouseEvent.button == Input::MouseButton::Left || mouseEvent.button == Input::MouseButton::Right)
+        {
+            mMouseClickPos = mouseEvent.pos;
+            mMouseDragPos = mouseEvent.pos;
+            mIsAnyButtonDown = 1.f;
+        }
+        break;
+    case MouseEvent::Type::ButtonUp:
+        if (mouseEvent.button == Input::MouseButton::Left || mouseEvent.button == Input::MouseButton::Right)
+        {
+            mMouseDragPos = mouseEvent.pos;
+            mIsAnyButtonDown = -1.f;
+        }
+        break;
+    case MouseEvent::Type::Move:
+        if (mIsAnyButtonDown == 1.f)
+        {
+            mMouseDragPos = mouseEvent.pos;
+        }
+        break;
+    default:
+        break;
+    }
+    mpShadertoyMouse.xy = mMouseDragPos;
+    mpShadertoyMouse.zw = mMouseClickPos*float2(mIsAnyButtonDown,1.f);
 
     return false;
 }
