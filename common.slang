@@ -36,6 +36,12 @@ vec3 Uncharted2ToneMapping(vec3 color)
     return pow(color / white, vec3(gammainv));
 }
 
+vec3 hsv2rgb(vec3 c)
+{
+    const vec4 K = vec4(1, 2. / 3., 1. / 3., 3);
+    return c.z * mix(K.xxx, clamp(abs(fract(c.xxx + K.xyz) * 6. - K.www) - K.xxx, 0., 1.), c.y);
+} //fragColor.rgb = hsv2rgb(vec3(fragCoord.x/iResolution.x,1.,fragCoord.y/iResolution.y));
+
 float min3(float a, float b, float c)
 {
     return min(min(a, b), c);

@@ -34,6 +34,13 @@
 #define SCENE_SDF sdPrimitives
 #define SCENE_BDF bdPrimitives
 
+// view
+#define V_COLORING 2
+#define V_COLORING_FUNC itershadeHSV
+#define V_COLOR_A (vec3(97, 130, 234) /255.)
+#define V_COLOR_B (vec3(221, 220, 219)/255.)
+#define V_COLOR_C (vec3(220, 94, 75)  /255.)
+
 #endif
 
 #endif

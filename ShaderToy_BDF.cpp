@@ -38,19 +38,24 @@ namespace {
     const char* kTraceStr = "TRACE";
     const char* kShadowStr = "SHADOW";
 
-    Gui::RadioButtonGroup kSceneRBs = { {0,"Blobs", false}, {1,"Primitives", true},
-        {2,"Sphere", true}, {3,"Box", false}, {4,"Cylinder", true}, {5,"Torus", true}};
+    Gui::RadioButtonGroup kColoringRBs = { {0,"Default",true},{1,"Stepsize",true},{2,"Shadow stepsize",true},{3,"Original Segment Tracing",true}};
+    enum class Coloring : uint32_t { DEFAULT = 0, STEPSIZE = 1, SHADOWSTEP = 2, SEGMENT_TRACING = 3};
+
+    Gui::RadioButtonGroup kColorStepFunRBs = { {0,"Old",true},{1,"HSV",true},{2,"2",true},{3,"3",true} };
+
+    Gui::RadioButtonGroup kSceneRBs = { {0,"Blobs", true}, {1,"Primitives", true},
+        {2,"Sphere", true}, {3,"Box", true}, {4,"Cylinder", true}, {5,"Torus", true}};
     enum class Scenes : uint32_t {BLOBS = 0, PRIMITIVES = 1, SPHERE = 2, BOX = 3, CYLINDER = 4, TORUS = 5};
 
-    Gui::RadioButtonGroup kTraceRBs = { {0,"sdf_trace", false}, {1,"bdf_trace", true},{2,"segment_trace",true},{3,"their_sphere_trace",true} };
+    Gui::RadioButtonGroup kTraceRBs = { {0,"sdf_trace", true}, {1,"bdf_trace", true},{2,"segment_trace",true},{3,"their_sphere_trace",true} };
     enum class Tracers : uint32_t {SDF_TRACE = 0, BDF_TRACE = 1, SEGMENT_TRACE = 2, THEIR_SPHERE_TRACE = 3};
-    Gui::RadioButtonGroup kShadowRBs = { {0,"sdf_trace", false}, {1,"bdf_trace", true}, {2,"no_shadow",true}};
+    Gui::RadioButtonGroup kShadowRBs = { {0,"sdf_trace", true}, {1,"bdf_trace", true}, {2,"no_shadow",true}};
     enum class Shadows : uint32_t { SDF_TRACE = 0, BDF_TRACE = 1, NO_SHADOW = 2 };
 }
 
 void ShaderToy_BDF::onGuiRender(Gui* pGui)
 {
-    Gui::Window w(pGui, "Falcor", { 350, 500 });
+    Gui::Window w(pGui, "Falcor", { 600, 500 });
     gpFramework->renderGlobalUI(pGui);
     auto camearGroup = Gui::Group(pGui, "Camera Controls", false);
     if (camearGroup.open())
@@ -68,120 +73,160 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
     {
         static bool changed = true;
 
-        // SCENE
+        // Image COLORING
+
+        static Coloring colorID = Coloring::DEFAULT;
+        settingsGroup.text("Image:");
+        ImGui::PushID("Image:");
+        bool changedColoring = settingsGroup.radioButtons(kColoringRBs, reinterpret_cast<uint32_t&>(colorID));
+        ImGui::PopID();
+        changed |= changedColoring;
+
+        static uint32_t vColoringStepFunID = 1;
+        static float3 vColorA = float3(97, 130, 234) / 255.f;
+        static float3 vColorB = float3(221, 220, 219) / 255.f;
+        static float3 vColorC = float3(220, 94, 75) / 255.f;
+        if (colorID == Coloring::STEPSIZE || colorID == Coloring::SHADOWSTEP)
+        {
+            settingsGroup.text("Step coloring:");
+            changed |= settingsGroup.radioButtons(kColorStepFunRBs, vColoringStepFunID);
+            if (vColoringStepFunID >= 2)
+            {
+                changed |= ImGui::ColorEdit3("Color A", &vColorA.x);
+                changed |= ImGui::ColorEdit3("Color B", &vColorB.x);
+            }
+            if (vColoringStepFunID == 3)
+            {
+                changed |= ImGui::ColorEdit3("Color C", &vColorC.x);
+            }
+        }
 
         static Scenes sceneID = Scenes::PRIMITIVES;
-        settingsGroup.text(kSceneStr);
-        ImGui::PushID(kSceneStr);
-        bool changedScene = settingsGroup.radioButtons(kSceneRBs, reinterpret_cast<uint32_t&>(sceneID));
-        ImGui::PopID();
-        changed |= changedScene;
-        static float sThreshold  = .5f;
+        static float sThreshold = .5f;
         static float sBlobRadius = 4.f;
         static float3 pPrimitiveData = float3(1);
         static int3 pRepeatNum = int3(3, 0, 3);
         static float3 pRepeatDist = float3(10);
         static bool pShowPlane = true;
-        switch (sceneID)
-        {
-        case Scenes::BLOBS:
-            changed |= ImGui::SliderFloat("S_THRESHOLD", &sThreshold, 0.f, 1.f);
-            changed |= ImGui::SliderFloat("S_BLOB_RADIUS", &sBlobRadius, 0.f, 8.f);
-            break;
-        case Scenes::PRIMITIVES:
-            break;
-        case Scenes::SPHERE:
-            changed |= ImGui::SliderFloat("Radius", &pPrimitiveData.y, 0.f, 8.f);
-            break;
-        case Scenes::BOX:
-            changed |= ImGui::SliderFloat3("Size", &pPrimitiveData.x, 0.f, 8.f);
-            break;
-        case Scenes::CYLINDER:
-            changed |= ImGui::SliderFloat2("R and h", &pPrimitiveData.x, 0.f, 8.f);
-            break;
-        case Scenes::TORUS:
-            changed |= ImGui::SliderFloat2("R and r", &pPrimitiveData.x, 0.f, 8.f);
-            break;
-        default:
-            break;
-        }
-        if (static_cast<uint32_t>(Scenes::SPHERE) <= static_cast<uint32_t>(sceneID))
-        {
-            changed |= ImGui::SliderInt3("Repetition", &pRepeatNum.x, 0, 100);
-            changed |= ImGui::SliderFloat3("Distance", &pRepeatDist.x, 0.f, 25.f);
-            changed |= ImGui::Checkbox("Show ground plane", &pShowPlane);
-        }
-
-        // TRACE
-
         static Tracers traceID = Tracers::SDF_TRACE;
-        settingsGroup.text(kTraceStr);
-        bool traceChanged = false;
-        ImGui::PushID(kTraceStr);
-        if (sceneID == Scenes::BLOBS)
-        {
-            traceChanged |= settingsGroup.radioButtons(kTraceRBs, reinterpret_cast<uint32_t&>(traceID));
-        }
-        else
-        {
-            auto tracemethods = Gui::RadioButtonGroup(kTraceRBs.begin(), kTraceRBs.begin() + 2);
-            traceChanged |= settingsGroup.radioButtons(tracemethods, reinterpret_cast<uint32_t&>(traceID));
-        }
-        ImGui::PopID();
-        changed |= traceChanged;
-
         static int primaryMaxIter = 512;
         static float primaryMaxDist = 500.0f;
-        if (changedScene && sceneID == Scenes::BLOBS) primaryMaxDist = glm::min(primaryMaxDist, 60.f);
-        if (changedScene && sceneID != Scenes::BLOBS) primaryMaxDist = glm::max(primaryMaxDist, 500.f);
-        changed |= ImGui::SliderInt("PRIMARY_MAXITER", &primaryMaxIter, 1, 1024);
-        changed |= ImGui::SliderFloat("PRIMARY_MAXDIST", &primaryMaxDist, 1.0f, 1024.0f);
         static float sMarchEpsilon = 0.1f;
         static float sKappaFactor = 2.f;
-        if (traceID == Tracers::SEGMENT_TRACE || traceID == Tracers::THEIR_SPHERE_TRACE)
-        {
-            changed |= ImGui::SliderFloat("S_MARCH_EPSILON", &sMarchEpsilon, 1e-15f, 1.f,"%.4f", 3.f);
-        }
-        if (traceID == Tracers::SEGMENT_TRACE)
-        {
-            changed |= ImGui::SliderFloat("S_KAPPA_FACTOR", &sKappaFactor, 1e-15f, 5.f);
-        }
-
-        // SHADOW
-
         static Shadows shadowID = Shadows::SDF_TRACE;
         static int secondaryMaxIter = 40;
         static float secondaryMaxDist = 40.0f;
         static float secondaryEpsilon = 0.003f;
         static float secondaryMinDist = 0.01f;
         static float secondaryNOffset = 0.01f;
-        if (traceChanged && shadowID != Shadows::NO_SHADOW)
+
+        if (colorID != Coloring::SEGMENT_TRACING)
         {
-            shadowID = traceID == Tracers::SDF_TRACE ? Shadows::SDF_TRACE : Shadows::BDF_TRACE;
-        }
-        if (sceneID == Scenes::BLOBS)
-        {
-            shadowID = Shadows::NO_SHADOW;
-        }
-        else
-        {
-            settingsGroup.text(kShadowStr);
-            ImGui::PushID(kShadowStr);
-            changed |= settingsGroup.radioButtons(kShadowRBs, reinterpret_cast<uint32_t&>(shadowID));
+            // SCENE
+
+            settingsGroup.text("Scene:");
+            ImGui::PushID("Scene:");
+            bool changedScene = settingsGroup.radioButtons(kSceneRBs, reinterpret_cast<uint32_t&>(sceneID));
             ImGui::PopID();
-        }
-        if (shadowID != Shadows::NO_SHADOW)
-        {
-            changed |= ImGui::SliderInt("SECONDARY_MAXITER", &secondaryMaxIter, 1, 1024);
-            changed |= ImGui::SliderFloat("SECONDARY_MAXDIST", &secondaryMaxDist, 1.0f, 1024.0f);
-            changed |= ImGui::SliderFloat("SECONDARY_MINDIST", &secondaryMinDist, 1e-15f, 1.f, "%.4f", 4.f);
-            changed |= ImGui::SliderFloat("SECONDARY_EPSILON", &secondaryEpsilon, 1e-15f, 1.f, "%.4f", 4.f);
-            changed |= ImGui::SliderFloat("SECONDARY_NOFFSET", &secondaryNOffset, 1e-15f, 1.f, "%.4f", 4.f);
-        }
+            changed |= changedScene;
+            switch (sceneID)
+            {
+            case Scenes::BLOBS:
+                changed |= ImGui::SliderFloat("S_THRESHOLD", &sThreshold, 0.f, 1.f);
+                changed |= ImGui::SliderFloat("S_BLOB_RADIUS", &sBlobRadius, 0.f, 8.f);
+                break;
+            case Scenes::PRIMITIVES:
+                break;
+            case Scenes::SPHERE:
+                changed |= ImGui::SliderFloat("Radius", &pPrimitiveData.y, 0.f, 8.f);
+                break;
+            case Scenes::BOX:
+                changed |= ImGui::SliderFloat3("Size", &pPrimitiveData.x, 0.f, 8.f);
+                break;
+            case Scenes::CYLINDER:
+                changed |= ImGui::SliderFloat2("R and h", &pPrimitiveData.x, 0.f, 8.f);
+                break;
+            case Scenes::TORUS:
+                changed |= ImGui::SliderFloat2("R and r", &pPrimitiveData.x, 0.f, 8.f);
+                break;
+            default:
+                break;
+            }
+            if (static_cast<uint32_t>(Scenes::SPHERE) <= static_cast<uint32_t>(sceneID))
+            {
+                changed |= ImGui::SliderInt3("Repetition", &pRepeatNum.x, 0, 100);
+                changed |= ImGui::SliderFloat3("Distance", &pRepeatDist.x, 0.f, 25.f);
+                changed |= ImGui::Checkbox("Show ground plane", &pShowPlane);
+            }
 
-        // UPDATE SHADER
+            // TRACE
 
+            settingsGroup.text("Trace:");
+            bool traceChanged = false;
+            ImGui::PushID("Trace:");
+            if (sceneID == Scenes::BLOBS)
+            {
+                traceChanged |= settingsGroup.radioButtons(kTraceRBs, reinterpret_cast<uint32_t&>(traceID));
+            }
+            else
+            {
+                auto tracemethods = Gui::RadioButtonGroup(kTraceRBs.begin(), kTraceRBs.begin() + 2);
+                traceChanged |= settingsGroup.radioButtons(tracemethods, reinterpret_cast<uint32_t&>(traceID));
+            }
+            ImGui::PopID();
+            changed |= traceChanged;
+
+            if (changedScene && sceneID == Scenes::BLOBS) primaryMaxDist = glm::min(primaryMaxDist, 60.f);
+            if (changedScene && sceneID != Scenes::BLOBS) primaryMaxDist = glm::max(primaryMaxDist, 500.f);
+            changed |= ImGui::SliderInt("PRIMARY_MAXITER", &primaryMaxIter, 1, 1024);
+            changed |= ImGui::SliderFloat("PRIMARY_MAXDIST", &primaryMaxDist, 1.0f, 1024.0f);
+            if (traceID == Tracers::SEGMENT_TRACE || traceID == Tracers::THEIR_SPHERE_TRACE)
+            {
+                changed |= ImGui::SliderFloat("S_MARCH_EPSILON", &sMarchEpsilon, 1e-15f, 1.f, "%.4f", 3.f);
+            }
+            if (traceID == Tracers::SEGMENT_TRACE)
+            {
+                changed |= ImGui::SliderFloat("S_KAPPA_FACTOR", &sKappaFactor, 1e-15f, 5.f);
+            }
+
+            // SHADOW
+            if (changedColoring && colorID == Coloring::SHADOWSTEP)
+            {
+                shadowID = traceID == Tracers::SDF_TRACE ? Shadows::SDF_TRACE : Shadows::BDF_TRACE;
+            }
+            if (traceChanged && shadowID != Shadows::NO_SHADOW)
+            {
+                shadowID = traceID == Tracers::SDF_TRACE ? Shadows::SDF_TRACE : Shadows::BDF_TRACE;
+            }
+            if (sceneID == Scenes::BLOBS || colorID == Coloring::STEPSIZE)
+            {
+                shadowID = Shadows::NO_SHADOW;
+            }
+            else
+            {
+                settingsGroup.text("Shadow:");
+                ImGui::PushID("Shadow:");
+                changed |= settingsGroup.radioButtons(kShadowRBs, reinterpret_cast<uint32_t&>(shadowID));
+                ImGui::PopID();
+            }
+            if (shadowID != Shadows::NO_SHADOW)
+            {
+                changed |= ImGui::SliderInt("SECONDARY_MAXITER", &secondaryMaxIter, 1, 1024);
+                changed |= ImGui::SliderFloat("SECONDARY_MAXDIST", &secondaryMaxDist, 1.0f, 1024.0f);
+                changed |= ImGui::SliderFloat("SECONDARY_MINDIST", &secondaryMinDist, 1e-15f, 1.f, "%.4f", 4.f);
+                changed |= ImGui::SliderFloat("SECONDARY_EPSILON", &secondaryEpsilon, 1e-15f, 1.f, "%.4f", 4.f);
+                changed |= ImGui::SliderFloat("SECONDARY_NOFFSET", &secondaryNOffset, 1e-15f, 1.f, "%.4f", 4.f);
+            }
+
+            // UPDATE SHADER
+        }
         if (changed) {
+            mpMainPass->addDefine("V_COLORING", std::to_string(static_cast<uint32_t>(colorID)));
+            mpMainPass->addDefine("V_COLORING_FUNC", std::string("itershade") + kColorStepFunRBs[vColoringStepFunID].label);
+            mpMainPass->addDefine("V_COLOR_A", std::string("vec3(")+std::to_string(vColorA.x)+','+std::to_string(vColorA.y)+','+std::to_string(vColorA.z)+')');
+            mpMainPass->addDefine("V_COLOR_B", std::string("vec3(")+std::to_string(vColorB.x)+','+std::to_string(vColorB.y)+','+std::to_string(vColorB.z)+')');
+            mpMainPass->addDefine("V_COLOR_C", std::string("vec3(")+std::to_string(vColorC.x)+','+std::to_string(vColorC.y)+','+std::to_string(vColorC.z)+')');
+
             mpMainPass->addDefine("SCENE_SDF", std::string("sd") + kSceneRBs[reinterpret_cast<uint32_t&>(sceneID)].label);
             mpMainPass->addDefine("SCENE_BDF", std::string("bd") + kSceneRBs[reinterpret_cast<uint32_t&>(sceneID)].label);
             
