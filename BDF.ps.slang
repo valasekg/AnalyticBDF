@@ -267,7 +267,7 @@ void mainImageBDF(out vec4 fragColor, in vec2 fragCoord)
 #else
     if (bool(ret.flags & 1))
     { // background
-        fragColor.rgb += mix(vec3(111,78,55), vec3(135,206,235), ray.V*.5+.5)/255.0;
+        fragColor.rgb += mix(vec3(111,78,55), vec3(135,206,235), ray.V.y*.5+.5)/255.0;
     }
     else if (bool(ret.flags & 2))
     { // shading
@@ -287,6 +287,7 @@ void mainImageBDF(out vec4 fragColor, in vec2 fragCoord)
             fragColor.rgb += float((sh.flags & 1) != 0) * max(dot(n, l), 0.) * .5 * (1. + l.xyz); //
 #endif
         }
+        fragColor.rgb = Uncharted2ToneMapping(fragColor.rgb);
 #if V_COLORING == 2
         fragColor.rgb = V_COLORING_FUNC(float(sh_steps) / float(3*SECONDARY_MAXITER));
 #endif
@@ -295,7 +296,6 @@ void mainImageBDF(out vec4 fragColor, in vec2 fragCoord)
     { //
         fragColor.rgb = vec3(1, 0, 0);
     }
-    fragColor.rgb = Uncharted2ToneMapping(fragColor.rgb);
 
 #endif
 }
