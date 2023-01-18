@@ -15,5 +15,6 @@
     <None Include="common.slang" />
     <None Include="bdf_primitives.slang" />
     <None Include="sdf_primitives.slang" />
+    <None Include="defines.slang" />
   </ItemGroup>
 </Project>

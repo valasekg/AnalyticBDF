@@ -45,10 +45,12 @@ float sdPlane(vec3 p, vec3 n)
 
 // Operations
 
-vec3 opRepLim(vec3 p, float c, in vec3 l)
-{
-    return p - c * clamp(round(p / c), -l, l);
-}
-#define REP(p,s) (mod((p)+(s)*0.5,s)-(s)*0.5)
+#define REPLIM(p,c,l) ( (p) - (c) * clamp(round( (p) / (c) ),-l,l) )
+
+//vec3 opRepLim(vec3 p, float c, in vec3 l)
+//{
+//    return p - c * clamp(round(p / c), -l, l);
+//}
+//#define REP(p,s) (fmod((p)+(s)*0.5,s)-(s)*0.5)
 
 #endif

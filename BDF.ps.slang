@@ -1,4 +1,5 @@
-
+#include "glsl_to_hlsl.slang"
+#include "defines.slang"
 #include "common.slang"
 #include "SegmentTracing.slang"
 #include "sdf_primitives.slang"
@@ -10,45 +11,6 @@ cbuffer Camera
     float4x4 camInvViewProj;
 };
 
-#ifndef PRIMARY_MAXITER
-#define PRIMARY_MAXITER 1024
-#endif
-#ifndef PRIMARY_MAXDIST
-#define PRIMARY_MAXDIST 500.
-#endif
-#ifndef SECONDARY_MAXITER
-#define SECONDARY_MAXITER 40
-#endif
-#ifndef SECONDARY_MAXDIST
-#define SECONDARY_MAXDIST 40.
-#endif
-#ifndef SECONDARY_EPSILON
-#define SECONDARY_EPSILON 0.003
-#endif
-#ifndef SECONDARY_MINDIST
-#define SECONDARY_MINDIST 0.01
-#endif
-#ifndef SECONDARY_NOFFSET
-#define SECONDARY_NOFFSET 0.01
-#endif
-
-// bdf_trace or sdf_trace
-#ifndef TRACE
-#define TRACE sdf_trace
-#endif
-// bdf_shadow or sdf_trace or no_shadow
-#ifndef SHADOW
-#define SHADOW no_shadow
-#endif
-
-#ifndef SCENE_SDF
-#define SCENE_SDF sdf
-#endif
-
-#ifndef SCENE_BDF
-#define SCENE_BDF bdf
-#endif
-static const vec3 EyeStartPosition = vec3(-3, 1, 5);
 
 ////////////////////////////////////////////////////////////////////////////
 //
@@ -56,38 +18,35 @@ static const vec3 EyeStartPosition = vec3(-3, 1, 5);
 //
 ////////////////////////////////////////////////////////////////////////////
 
-
-//VS
-
-float sdMeta(vec3 p, float R)
+float sdMeta(vec3 p, float R) // optimized Vertex (unused)
 {
     float y = 1. - clamp(dot2(p) / (R * R), 0.0, 1.0);
     return -y * y * y;
 }
 
-float sdf(vec3 p)
+float sdBlobs(vec3 p)
 {
-    return -Object(p) / KGlobal();    
+    return -Object(p) / KGlobal();
     //float d = threshold;
     //d += sdMeta(p - vec3(-1, 0, 0), 2.);
     //d += sdMeta(p - vec3(1.0, 0, 0), 2.);
     //d += sdMeta(p - vec3(0.7, 2, 0), 2.);
     //return d / 0.645;
 }
-float bdf(vec3 p)
+float bdBlobs(vec3 p)
 {
     float d = 1e+10;
     float r = (1. - T) * radius;
     d = min(d, bdSphere(p - vec3(-radius / 2.0, 0, 0), r));
     d = min(d, bdSphere(p - vec3(radius / 2.0, 0, 0), r));
     d = min(d, bdSphere(p - vec3(radius / 3.0, radius, 0), r));
-    float s = sdf(p);
+    float s = sdBlobs(p);
     float sd = sqrt(d * d + r) - r;
     return sd < T * radius ? s : d;
 }
 //loat bdf(vec3 p){return sdf(p);}
 
-float sdf2(vec3 p)
+float sdPrimitives(vec3 p)
 {
     float d = 1e+10;
     //p.xz = REP(p.xz,20.);
@@ -99,7 +58,7 @@ float sdf2(vec3 p)
     d = min(d, sdPlane(p - vec3(0, -2, 0), vec3(0, 1, 0)));
     return d;
 }
-float bdf2(vec3 p)
+float bdPrimitives(vec3 p)
 {
     float d = 1e+10;
     //p.xz = REP(p.xz,20.);
@@ -110,6 +69,69 @@ float bdf2(vec3 p)
     d = min(d, bdTorus(p + vec3(0, 0, +4), vec2(1, .5)));
     d = min(d, bdPlane(p - vec3(0, -2, 0), vec3(0, 1, 0)));
     return d;
+}
+
+vec3 repetition(vec3 p)
+{
+#if P_REPEAT_X_NUM
+    p.x = REPLIM(p.x, P_REPEAT_DIST.x, float(P_REPEAT_X_NUM));
+#endif
+#if P_REPEAT_Y_NUM
+    p.y = REPLIM(p.y, P_REPEAT_DIST.y, float(P_REPEAT_Y_NUM));
+#endif
+#if P_REPEAT_Z_NUM
+    p.z = REPLIM(p.z, P_REPEAT_DIST.z, float(P_REPEAT_Z_NUM));
+#endif
+    return p;
+}
+float sdPlaneAdd(float d, vec3 p)
+{
+#if P_PLANE_ON
+    return min(d, sdPlane(p + vec3(0, P_PRIMITIVE_DATA.y, 0), vec3(0, 1, 0)));
+#else
+    return d;
+#endif
+}
+float bdPlaneAdd(float d, vec3 p)
+{
+#if P_PLANE_ON
+    return min(d, bdPlane(p + vec3(0, P_PRIMITIVE_DATA.y, 0), vec3(0, 1, 0)));
+#else
+    return d;
+#endif
+}
+
+float sdSphere(vec3 p)
+{
+    return sdPlaneAdd(sdSphere(repetition(p), P_PRIMITIVE_DATA.y), p);
+}
+float sdBox(vec3 p)
+{
+    return sdPlaneAdd(sdBox(repetition(p), P_PRIMITIVE_DATA.xyz), p);
+}
+float sdCylinder(vec3 p)
+{
+    return sdPlaneAdd(sdCylinder(repetition(p), P_PRIMITIVE_DATA.x, P_PRIMITIVE_DATA.y), p);
+}
+float sdTorus(vec3 p)
+{
+    return sdPlaneAdd(sdTorus(repetition(p), P_PRIMITIVE_DATA.xy), p);
+}
+float bdSphere(vec3 p)
+{
+    return bdPlaneAdd(bdSphere(repetition(p), P_PRIMITIVE_DATA.y), p);
+}
+float bdBox(vec3 p)
+{
+    return bdPlaneAdd(bdBox(repetition(p), P_PRIMITIVE_DATA.xyz), p);
+}
+float bdCylinder(vec3 p)
+{
+    return bdPlaneAdd(bdCylinder(repetition(p), P_PRIMITIVE_DATA.x, P_PRIMITIVE_DATA.y), p);
+}
+float bdTorus(vec3 p)
+{
+    return bdPlaneAdd(bdTorus(repetition(p), P_PRIMITIVE_DATA.xy), p);
 }
 
 vec3 normal(const in vec3 p)
@@ -159,7 +181,7 @@ TraceResult segment_trace(in Ray ray, in SphereTraceDesc params)
 {   //wrap
     TraceResult ret;
     bool h;
-    ret.T = SphereTracing(ray.P, ray.V, h, ret.steps, ray.Tmin, ray.Tmax, params.epsilon, params.maxiters);
+    ret.T = SegmentTracing(ray.P, ray.V, h, ret.steps, ray.Tmin, ray.Tmax, S_MARCH_EPSILON, params.maxiters);
     ret.flags = int(ret.T >= ray.Tmax)
               | (int(h) << 1)
               | (int(ret.steps < params.maxiters) << 2);
@@ -171,7 +193,7 @@ TraceResult their_sphere_trace(in Ray ray, in SphereTraceDesc params)
 { //wrap
     TraceResult ret;
     bool h;
-    ret.T = SphereTracing(ray.P, ray.V, h, ret.steps, ray.Tmin, ray.Tmax, params.epsilon, params.maxiters);
+    ret.T = SphereTracing(ray.P, ray.V, h, ret.steps, ray.Tmin, ray.Tmax, S_MARCH_EPSILON, params.maxiters);
     ret.flags = int(ret.T >= ray.Tmax)
               | (int(h) << 1)
               | (int(ret.steps < params.maxiters) << 2);
@@ -223,11 +245,13 @@ void mainImageBDF(out vec4 fragColor, in vec2 fragCoord)
     
     if (bool(ret.flags & 1))
     { // background
-        vec3 p = ray.P + ray.V * ray.Tmax;
-        float d = SCENE_BDF(p) - SCENE_SDF(p);
+        //vec3 p = ray.P + ray.V * ray.Tmax;
+        //float d = SCENE_BDF(p) - SCENE_SDF(p);
         // = log(d);
         //d = 2.*atan(d);
         //fragColor.rgb += vec3(d,d,d*2.);
+        fragColor.rgb += mix(vec3(111,78,55), vec3(135,206,235), ray.V*.5+.5)/255.0;
+
     }
     else if (bool(ret.flags & 2))
     { // shading
@@ -237,7 +261,8 @@ void mainImageBDF(out vec4 fragColor, in vec2 fragCoord)
         for (float t = 0.; t < 2. * pi; t += 2. * pi / 3.)
         { // lights
             vec3 l = sqrt(.5) * vec3(cos(t), 1, sin(t));
-            Ray shadowRay = { p + SECONDARY_NOFFSET * n, SECONDARY_MINDIST, l, SECONDARY_MAXDIST };
+            float minstep = tanPix * ret.T;
+            Ray shadowRay = { p + (SECONDARY_NOFFSET + minstep) * n, SECONDARY_MINDIST + minstep, l, SECONDARY_MAXDIST };
             SphereTraceDesc shadowDesc = { SECONDARY_EPSILON, SECONDARY_MAXITER };
             TraceResult sh = SHADOW(shadowRay, shadowDesc);
             fragColor.rgb += float((sh.flags & 1) != 0) * max(dot(n, l), 0.) * .5 * (1. + l.xyz); //

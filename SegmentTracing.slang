@@ -1,8 +1,11 @@
 #include "glsl_to_hlsl.slang"
+#include "defines.slang"
 
 ///
 ///     Shadertoy source for Segment Tracing from https://www.shadertoy.com/view/WdVyDW
-///
+///         We left their code unchaned except some necessery changes to port the code.
+///         Changed lines are marked with the "[changed]" text followed by a comment.
+///==========================================================================================
 
 // Shadertoy implementation of "Segment Tracing using Local Lipschitz Bounds" - Eurographics 2020
 // Eric Galin, Eric Guérin, Axel Paris, Adrien Peytavie
@@ -15,14 +18,14 @@
 // You can move the sliders with the mouse.
 // MIT License
 
-static const int StepsMax = 150; // Maximum step count for sphere & segment tracing
-static const float Epsilon = 0.1; // Marching epsilon
-static const float T = 0.5; // Surface threshold.
+static const int StepsMax = PRIMARY_MAXITER; // Maximum step count for sphere & segment tracing // [changed] added UI support
+static const float Epsilon = S_MARCH_EPSILON; // Marching epsilon                               // [changed] added UI support
+static const float T = S_THRESHOLD; // Surface threshold.                                       // [changed] added UI support
  
 static const float ra = 20.0; // Ray start interval
 static const float rb = 60.0; // Ray end interval
-static const float radius = 8.0; // Primitive radius
-static const float kappa = 2.0; // Segment tracing factor for next candidate segment
+static const float radius = S_BLOB_RADIUS; // Primitive radius                                  // [changed] added UI support
+static const float kappa = S_KAPPA_FACTOR; // Segment tracing factor for next candidate segment // [changed] added UI support
 
 // Transforms
 vec3 RotateY(vec3 p, float a)
@@ -154,8 +157,7 @@ vec3 ObjectNormal(in vec3 p)
 // h : hit
 // s : Number of steps
 float SphereTracing(vec3 o, vec3 u, out bool h, out int s,
-    float ra, float rb, float Epsilon, int StepsMax // [Changed] to work with BDF code)
-)
+    float ra, float rb, float Epsilon, int StepsMax)             // [Changed] added to work with BDF code
 {
     float kGlobal = KGlobal();
     float t = ra;
@@ -184,9 +186,9 @@ float SphereTracing(vec3 o, vec3 u, out bool h, out int s,
     return t;
 }
 
-float SphereTracing(vec3 o, vec3 u, out bool h, out int s)
+float SphereTracing(vec3 o, vec3 u, out bool h, out int s)       // [Changed] to work with original code
 {
-    return SphereTracing(o, u, h, s, ra, rb, Epsilon, StepsMax); // [Changed] to work with original code
+    return SphereTracing(o, u, h, s, ra, rb, Epsilon, StepsMax); // [Changed] call the new signiture with the same constants
 }
 
 // Trace ray using ray marching
@@ -195,8 +197,7 @@ float SphereTracing(vec3 o, vec3 u, out bool h, out int s)
 // h : hit
 // s : Number of steps
 float SegmentTracing(vec3 o, vec3 u, out bool h, out int s,
-        float ra, float rb, float Epsilon, int StepsMax // [Changed] to work with BDF code
-)
+        float ra, float rb, float Epsilon, int StepsMax)         // [Changed] added to work with BDF code
 {
     float t = ra;
     h = false;
@@ -239,9 +240,9 @@ float SegmentTracing(vec3 o, vec3 u, out bool h, out int s,
     return t;
 }
 
-float SegmentTracing(vec3 o, vec3 u, out bool h, out int s)
+float SegmentTracing(vec3 o, vec3 u, out bool h, out int s)         // [Changed] to work with original code
 {
-    return SegmentTracing(o, u, h, s, ra, rb, Epsilon, StepsMax); // [Changed] to work with original code
+    return SegmentTracing(o, u, h, s, ra, rb, Epsilon, StepsMax);   // [Changed] call the new signiture with the same constants
 }
 
 // Shading functions

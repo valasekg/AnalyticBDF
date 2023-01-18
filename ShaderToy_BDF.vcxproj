@@ -27,6 +27,7 @@
   <ItemGroup>
     <None Include="bdf_primitives.slang" />
     <None Include="common.slang" />
+    <None Include="defines.slang" />
     <None Include="glsl_to_hlsl.slang" />
     <None Include="sdf_primitives.slang" />
     <None Include="SegmentTracing.slang" />
