@@ -98,7 +98,7 @@ float bdCone(vec3 p, float t) // Infinite
 float bdPlane(vec3 p, vec3 n)
 {
     float d = dot(p, n); // = sdPlane(p, n);
-    return d < 0. ? d : 2. * d;
+    return d < 0. ? d : 2. * d + 2.;
     // Techniqually the BDF would be ininite, but since we have to sphere trace
     // back from the inside to the ray-surface intersection, we take an arbitrary
     // value for the BDF. This is the only place where we do that.
