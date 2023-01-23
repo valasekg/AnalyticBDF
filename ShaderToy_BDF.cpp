@@ -41,7 +41,7 @@ namespace {
     Gui::RadioButtonGroup kColoringRBs = { {0,"Default",true},{1,"Stepsize",true},{2,"Shadow stepsize",true},{3,"Original Segment Tracing",true}};
     enum class Coloring : uint32_t { DEFAULT = 0, STEPSIZE = 1, SHADOWSTEP = 2, SEGMENT_TRACING = 3};
 
-    Gui::RadioButtonGroup kColorStepFunRBs = { {0,"Old",true},{1,"HSV",true},{2,"2",true},{3,"3",true} };
+    Gui::RadioButtonGroup kColorStepFunRBs = { {0,"Old",true},{1,"HSV",true},{2,"2",true},{3,"3",true},{4,"4",true} };
 
     Gui::RadioButtonGroup kSceneRBs = { {0,"Blobs", true}, {1,"Primitives", true},
         {2,"Sphere", true}, {3,"Box", true}, {4,"Cylinder", true}, {5,"Torus", true}};
@@ -61,8 +61,8 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
     if (camearGroup.open())
     {
         if (camearGroup.button("Reset camera")) {
-            mpCamera->setPosition(float3(0, 2, -4));
-            mpCamera->setTarget(float3(0, 1, 0));
+            mpCamera->setPosition(float3(2, 1.25, 1.5));
+            mpCamera->setTarget(float3(0, 0, 0));
         }
         mpCamera->renderUI(w);
 
@@ -83,9 +83,10 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
         changed |= changedColoring;
 
         static uint32_t vColoringStepFunID = 1;
-        static float3 vColorA = float3(97, 130, 234) / 255.f;
-        static float3 vColorB = float3(221, 220, 219) / 255.f;
-        static float3 vColorC = float3(220, 94, 75) / 255.f;
+        static float3 vColorA = float3(93, 127, 232) / 255.f;
+        static float3 vColorB = float3(92, 236, 220) / 255.f;
+        static float3 vColorC = float3(241, 222, 100) / 255.f;
+        static float3 vColorD = float3(220, 94, 75) / 255.f;
         if (colorID == Coloring::STEPSIZE || colorID == Coloring::SHADOWSTEP)
         {
             settingsGroup.text("Step coloring:");
@@ -95,9 +96,13 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
                 changed |= ImGui::ColorEdit3("Color A", &vColorA.x);
                 changed |= ImGui::ColorEdit3("Color B", &vColorB.x);
             }
-            if (vColoringStepFunID == 3)
+            if (vColoringStepFunID >= 3)
             {
                 changed |= ImGui::ColorEdit3("Color C", &vColorC.x);
+            }
+            if (vColoringStepFunID == 4)
+            {
+                changed |= ImGui::ColorEdit3("Color D", &vColorD.x);
             }
         }
 
@@ -105,8 +110,8 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
         static float sThreshold = .5f;
         static float sBlobRadius = 4.f;
         static float3 pPrimitiveData = float3(1);
-        static int3 pRepeatNum = int3(3, 0, 3);
-        static float3 pRepeatDist = float3(10);
+        static int3 pRepeatNum = int3(1000, 0, 1000);
+        static float3 pRepeatDist = float3(4);
         static bool pShowPlane = true;
         static Tracers traceID = Tracers::SDF_TRACE;
         static int primaryMaxIter = 512;
@@ -226,6 +231,7 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
             mpMainPass->addDefine("V_COLOR_A", std::string("vec3(")+std::to_string(vColorA.x)+','+std::to_string(vColorA.y)+','+std::to_string(vColorA.z)+')');
             mpMainPass->addDefine("V_COLOR_B", std::string("vec3(")+std::to_string(vColorB.x)+','+std::to_string(vColorB.y)+','+std::to_string(vColorB.z)+')');
             mpMainPass->addDefine("V_COLOR_C", std::string("vec3(")+std::to_string(vColorC.x)+','+std::to_string(vColorC.y)+','+std::to_string(vColorC.z)+')');
+            mpMainPass->addDefine("V_COLOR_D", std::string("vec3(")+std::to_string(vColorD.x)+','+std::to_string(vColorD.y)+','+std::to_string(vColorD.z)+')');
 
             mpMainPass->addDefine("SCENE_SDF", std::string("sd") + kSceneRBs[reinterpret_cast<uint32_t&>(sceneID)].label);
             mpMainPass->addDefine("SCENE_BDF", std::string("bd") + kSceneRBs[reinterpret_cast<uint32_t&>(sceneID)].label);

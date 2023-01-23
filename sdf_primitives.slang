@@ -6,9 +6,9 @@
 
 // SDF primitives mostly copied from Inigo Quilez's SDF primitives https://iquilezles.org/articles/distfunctions/
 
-float sdSphere(vec3 p, float s)
+float sdSphere(vec3 p, float r)
 {
-    return length(p) - s;
+    return length(p) - r;
 }
 
 float sdBox(vec3 p, vec3 b)
@@ -33,8 +33,8 @@ float sdTorus(vec3 p, vec2 t) //t = vec2(R,r)
     return length(q) - t.y;
 }
 
-float sdCone(vec3 p, float t)
-{ //return sdCylinder(p,abs(t*p.y));
+float sdCone(vec3 p, float t)   // Infinite
+{
     return (length(p.xz) - abs(p.y) * t) / sqrt(1. + t * t);
 }
 

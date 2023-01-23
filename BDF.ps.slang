@@ -250,8 +250,19 @@ float3 itershade3(float v)
 {
     vec3 a = v < .5 ? V_COLOR_A : V_COLOR_B;
     vec3 b = v < .5 ? V_COLOR_B : V_COLOR_C;
-    v = v < .5 ? 2. * v : 2.*v-1.;
+    v = v < .5 ? 2. * v : 2. * v - 1.;
     return mix(a, b, v);
+}
+float3 itershade4(float v)
+{
+    const float ts[3+1] = { 0, 0.15, 0.4, 1.0 };
+    const float3 Cs[3 + 1] = { V_COLOR_A, V_COLOR_B, V_COLOR_C, V_COLOR_D };
+    int i = 0;
+    vec3 a, b;
+    for (; i < 3; ++i)
+        if(ts[i+1] >= v)
+            break;
+    return mix(Cs[i], Cs[i+1], (v - ts[i]) / (ts[i + 1] - ts[i]));
 }
 
 void mainImageBDF(out vec4 fragColor, in vec2 fragCoord)
@@ -267,24 +278,24 @@ void mainImageBDF(out vec4 fragColor, in vec2 fragCoord)
 #else
     if (bool(ret.flags & 1))
     { // background
-        fragColor.rgb += mix(vec3(111,78,55), vec3(135,206,235), ray.V.y*.5+.5)/255.0;
+        fragColor.rgb += mix(vec3(111,78,55), vec3(135,206,255), ray.V.y*.5+.5)/255.0;
     }
     else if (bool(ret.flags & 2))
     { // shading
         vec3 p = ray.P + ray.V * ret.T;
         vec3 n = normal(p);
-        fragColor.rgb += mix(vec3(.03, .04, .01), vec3(.04, .1, .2), 0.5 + 0.5 * p.y);
+        fragColor.rgb += mix(vec3(111, 78, 55), vec3(135, 206, 255), n.y * .5 + .5) / 255.0*0.07;
         int sh_steps = 0;
         for (float t = 0.; t < 2. * pi; t += 2. * pi / 3.)
         { // lights
             vec3 l = sqrt(.5) * vec3(cos(t), 1, sin(t));
             float minstep = tanPix * ret.T;
-            Ray shadowRay = { p + (SECONDARY_NOFFSET + minstep) * n, SECONDARY_MINDIST + minstep, l, SECONDARY_MAXDIST };
+            Ray shadowRay = { p + (SECONDARY_NOFFSET + tanPix * ret.T) * n, SECONDARY_MINDIST + minstep, l, SECONDARY_MAXDIST };
             SphereTraceDesc shadowDesc = { SECONDARY_EPSILON, SECONDARY_MAXITER };
             TraceResult sh = SHADOW(shadowRay, shadowDesc);
             sh_steps += sh.steps;
 #if V_COLORING != 2       
-            fragColor.rgb += float((sh.flags & 1) != 0) * max(dot(n, l), 0.) * .5 * (1. + l.xyz); //
+            fragColor.rgb += float((sh.flags & 1) != 0) * max(dot(n, l), 0.) * max(vec3(.5, .5, .6) + vec3(0.6, .3, .7) * l.xyz, 0.);
 #endif
         }
         fragColor.rgb = Uncharted2ToneMapping(fragColor.rgb);
@@ -296,7 +307,6 @@ void mainImageBDF(out vec4 fragColor, in vec2 fragCoord)
     { //
         fragColor.rgb = vec3(1, 0, 0);
     }
-
 #endif
 }
 
@@ -309,10 +319,12 @@ float4 main(noperspective float2 texC : TEXCOORD) : SV_TARGET
     mainImage(col, texC*iResolution);
 #endif
 #if V_COLORING == 1 || V_COLORING == 2
-    if (texC.x > 1-0.01)
+    if (texC.y < 0.02)
     {
-        col.rgb = V_COLORING_FUNC(1.-texC.y);
+        col.rgb = V_COLORING_FUNC(texC.x);
     }
 #endif
+    //col.rgb = max(0.0.rrr, col.rgb - 0.004.rrr);
+    //col.rgb = (col.rgb * (6.2f * col.rgb + 0.5f)) / (col.rgb * (6.2f * col.rgb + 1.7f) + 0.06f);
     return col;
 }

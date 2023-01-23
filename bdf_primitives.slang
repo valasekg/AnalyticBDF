@@ -8,19 +8,19 @@
 
 float bdSphere(vec3 p, float s)
 {
-    float d2 = dot(p, p);
+    float d2 = dot2(p);
     return d2 > s * s ? sqrt(d2 - s * s) : sqrt(d2) - s;
 }
 
-float bdBoxOlder(vec3 p, vec3 b)
+float bdBox(vec3 p, vec3 b)
 {
     vec3 q = abs(p) - b;
-    float d = min3(
+    float d = min3( //distances to the three corners
         dot2(q + vec3(2. * b.x, 0, 0)),
         dot2(q + vec3(0, 2. * b.y, 0)),
         dot2(q + vec3(0, 0, 2. * b.z))
     );
-    vec3 m = max(q, 0.);
+    vec3 m = max(q, 0.); // conditional distances to three edges:
     d = q.z >= 0. ? d : min(d,
             dot2(vec3(m.xy, q.z))
         );
@@ -30,21 +30,20 @@ float bdBoxOlder(vec3 p, vec3 b)
     d = q.x >= 0. ? d : min(d,
             dot2(vec3(m.yz, q.x))
         );
-    float s = min(max3(q.x, q.y, q.z), 0.);
+    float s = max3(q.x, q.y, q.z);
     return s < 0. ? s : sqrt(d);
 }
 
-float bdBox(vec3 p, vec3 b)
+float bdBoxSomehowSlower(vec3 p, vec3 b)
 {
     vec3 q = abs(p) - b;
-    float d = min3(
+    float d = min3( // minimum distance to face-diagonal vertices
         dot2(q + vec3(2. * b.x, 0, 0)),
         dot2(q + vec3(0, 2. * b.y, 0)),
         dot2(q + vec3(0, 0, 2. * b.z))
     );
-    vec3 m2 = max(q, 0.);
-    m2 *= m2;
     vec3 q2 = q * q;
+    vec3 m2 = (q >= 0.) * q2;
     d = q.z >= 0. ? d : min(d,
             m2.x + m2.y + q2.z
         );
@@ -54,7 +53,7 @@ float bdBox(vec3 p, vec3 b)
     d = q.x >= 0. ? d : min(d,
             q2.x + m2.y + m2.z
         );
-    float s = min(max3(q.x, q.y, q.z), 0.);
+    float s = max3(q.x, q.y, q.z);
     return s < 0. ? s : sqrt(d);
 }
 
@@ -70,15 +69,13 @@ float bdCylinder(vec3 p, float _r, float _h)
     float r = length(p.xz);
     vec2 q = vec2(r, abs(p.y)) - vec2(_r, _h);
     float d = dot2(vec2(max(q.x, 0.), q.y + 2. * _h));
-  
     d = q.x >= 0. && q.y >= 0. ? d : min(d,
           dot2(q)
       );
     d = q.x <= 0. ? d : min(d,
           dot2(vec2(r, max(q.y, 0.))) - _r * _r
       );
-      
-    float s = min(max(q.x, q.y), 0.0);
+    float s = max(q.x, q.y);
     return s < 0. ? s : sqrt(d);
 }
 
@@ -99,7 +96,7 @@ float bdPlane(vec3 p, vec3 n)
 {
     float d = dot(p, n); // = sdPlane(p, n);
     return d < 0. ? d : 2. * d + 2.;
-    // Techniqually the BDF would be ininite, but since we have to sphere trace
+    // Technically the BDF would be infinite, but since we have to sphere trace
     // back from the inside to the ray-surface intersection, we take an arbitrary
     // value for the BDF. This is the only place where we do that.
 }
