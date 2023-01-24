@@ -306,11 +306,12 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
 
             mTestDataString = std::string("sc") +
                 kColoringRBs[reinterpret_cast<uint32_t&>(colorID)].label + '_' +
-                kColorStepFunRBs[vColoringStepFunID].label + '_' +
-                kSceneRBs[reinterpret_cast<uint32_t&>(sceneID)].label + '_' +
-                kTraceRBs[reinterpret_cast<uint32_t&>(traceID)].label + '_' +
-                kShadowRBs[reinterpret_cast<uint32_t&>(shadowID)].label + '_' +
-                std::to_string(primaryMaxIter);
+                ((colorID == Coloring::STEPSIZE || colorID == Coloring::SHADOWSTEP) ? kColorStepFunRBs[vColoringStepFunID].label : "") + '_' +
+                kSceneRBs[reinterpret_cast<uint32_t&>(sceneID)].label + "__" +
+                kTraceRBs[reinterpret_cast<uint32_t&>(traceID)].label + "__" +
+                "shadow-" +
+                kShadowRBs[reinterpret_cast<uint32_t&>(shadowID)].label + "__" +
+                "step-" + std::to_string(primaryMaxIter);
             prevSceneID = sceneID;
         }
         changed = false;
