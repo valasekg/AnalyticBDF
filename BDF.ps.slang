@@ -166,7 +166,7 @@ TraceResult bdf_trace(in Ray ray, in SphereTraceDesc params)
     do
     {
         d = SCENE_BDF(ray.P + ret.T * ray.V);
-        ret.T += 0.99 * d;
+        ret.T += d;
         ++ret.steps;
     } while (ret.T < ray.Tmax && // Stay within bound box
               abs(d) > params.epsilon * ret.T && // Stop if cone is close to surface
@@ -318,12 +318,12 @@ float4 main(noperspective float2 texC : TEXCOORD) : SV_TARGET
 #else
     mainImage(col, texC*iResolution);
 #endif
-#if V_COLORING == 1 || V_COLORING == 2
-    if (texC.y < 0.02)
-    {
-        col.rgb = V_COLORING_FUNC(texC.x);
-    }
-#endif
+//#if V_COLORING == 1 || V_COLORING == 2
+//    if (texC.y < 0.02)
+//    {
+//        col.rgb = V_COLORING_FUNC(texC.x);
+//    }
+//#endif
     //col.rgb = max(0.0.rrr, col.rgb - 0.004.rrr);
     //col.rgb = (col.rgb * (6.2f * col.rgb + 0.5f)) / (col.rgb * (6.2f * col.rgb + 1.7f) + 0.06f);
     return col;

@@ -20,6 +20,7 @@ float bdBox(vec3 p, vec3 b)
         dot2(q + vec3(0, 2. * b.y, 0)),
         dot2(q + vec3(0, 0, 2. * b.z))
     );
+    
     vec3 m = max(q, 0.); // conditional distances to three edges:
     d = q.z >= 0. ? d : min(d,
             dot2(vec3(m.xy, q.z))
@@ -34,7 +35,7 @@ float bdBox(vec3 p, vec3 b)
     return s < 0. ? s : sqrt(d);
 }
 
-float bdBoxSomehowSlower(vec3 p, vec3 b)
+float bdBox2(vec3 p, vec3 b)
 {
     vec3 q = abs(p) - b;
     float d = min3( // minimum distance to face-diagonal vertices
@@ -42,8 +43,9 @@ float bdBoxSomehowSlower(vec3 p, vec3 b)
         dot2(q + vec3(0, 2. * b.y, 0)),
         dot2(q + vec3(0, 0, 2. * b.z))
     );
-    vec3 q2 = q * q;
+    vec3 q2 = q * q; // conditional distances to three edges/faces
     vec3 m2 = (q >= 0.) * q2;
+    //d = min(d, m2.x + m2.y + m2.z);
     d = q.z >= 0. ? d : min(d,
             m2.x + m2.y + q2.z
         );
@@ -53,6 +55,27 @@ float bdBoxSomehowSlower(vec3 p, vec3 b)
     d = q.x >= 0. ? d : min(d,
             q2.x + m2.y + m2.z
         );
+    float s = max3(q.x, q.y, q.z);
+    return s < 0. ? s : sqrt(d);
+}
+float bdBoxWIP(vec3 p, vec3 b)
+{
+    vec3 q = abs(p) - b;
+    vec4 b0 = vec4(b, 0);
+    float d = min3(
+        dot2(q + 2.*b0.xww),
+        dot2(q + 2.*b0.wyw),
+        dot2(q + 2.*b0.wwz)
+    );
+    vec3 q2 = dot2(q);
+    int sq = int(q.x > 0) + int(q.y > 0) + int(q.z > 0);
+    d = q.x <= 0 && sq == 1 ? min(d, q2.y + q2.z) : d;
+    d = q.y <= 0 && sq == 1 ? min(d, q2.x + q2.z) : d;
+    d = q.z <= 0 && sq == 1 ? min(d, q2.x + q2.y) : d;
+    d = sq == 2 ? min(d, q2.x + q2.y + q2.z) : d;
+    
+    //d = sq == 2 ? 0 : d;
+    
     float s = max3(q.x, q.y, q.z);
     return s < 0. ? s : sqrt(d);
 }

@@ -48,4 +48,5 @@ private:
     Camera::SharedPtr               mpCamera;
     CameraController::SharedPtr     mpCameraController;
     float4                          mpShadertoyMouse;
+    std::string mTestDataString;
 };

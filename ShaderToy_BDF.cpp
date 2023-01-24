@@ -55,7 +55,7 @@ namespace {
 
 void ShaderToy_BDF::onGuiRender(Gui* pGui)
 {
-    Gui::Window w(pGui, "Falcor", { 600, 500 });
+    Gui::Window w(pGui, "Falcor", { 485, 600 });
     gpFramework->renderGlobalUI(pGui);
     auto camearGroup = Gui::Group(pGui, "Camera Controls", false);
     if (camearGroup.open())
@@ -82,11 +82,11 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
         ImGui::PopID();
         changed |= changedColoring;
 
-        static uint32_t vColoringStepFunID = 1;
-        static float3 vColorA = float3(93, 127, 232) / 255.f;
-        static float3 vColorB = float3(92, 236, 220) / 255.f;
-        static float3 vColorC = float3(241, 222, 100) / 255.f;
-        static float3 vColorD = float3(220, 94, 75) / 255.f;
+        static uint32_t vColoringStepFunID = 4;
+        static float3 vColorA = float3( 93,  127, 232 ) / 255.f;
+        static float3 vColorB = float3( 92,  236, 220 ) / 255.f;
+        static float3 vColorC = float3( 241, 222, 100 ) / 255.f;
+        static float3 vColorD = float3( 220, 94,  75  ) / 255.f;
         if (colorID == Coloring::STEPSIZE || colorID == Coloring::SHADOWSTEP)
         {
             settingsGroup.text("Step coloring:");
@@ -106,7 +106,7 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
             }
         }
 
-        static Scenes sceneID = Scenes::PRIMITIVES;
+        static Scenes sceneID = Scenes::PRIMITIVES, prevSceneID = sceneID;
         static float sThreshold = .5f;
         static float sBlobRadius = 4.f;
         static float3 pPrimitiveData = float3(1);
@@ -119,9 +119,9 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
         static float sMarchEpsilon = 0.1f;
         static float sKappaFactor = 2.f;
         static Shadows shadowID = Shadows::SDF_TRACE;
-        static int secondaryMaxIter = 40;
-        static float secondaryMaxDist = 40.0f;
-        static float secondaryEpsilon = 0.003f;
+        static int secondaryMaxIter = 256;
+        static float secondaryMaxDist = 100.0f;
+        static float secondaryEpsilon = 0.001f;
         static float secondaryMinDist = 0.01f;
         static float secondaryNOffset = 0.01f;
 
@@ -139,20 +139,61 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
             case Scenes::BLOBS:
                 changed |= ImGui::SliderFloat("S_THRESHOLD", &sThreshold, 0.f, 1.f);
                 changed |= ImGui::SliderFloat("S_BLOB_RADIUS", &sBlobRadius, 0.f, 8.f);
+                if (changedScene)
+                {
+                    primaryMaxIter = 150;
+                    primaryMaxDist = 60.f;
+                    shadowID = Shadows::NO_SHADOW;
+                    mpCamera->setPosition(float3(0, 3.5, 7));
+                    mpCamera->setTarget(float3(0,2.2,0));
+                }
                 break;
             case Scenes::PRIMITIVES:
+                if (changedScene)
+                {
+                    mpCamera->setPosition(float3(6, 3, 4));
+                    mpCamera->setTarget(float3(0,0,0.5));
+                    if (traceID == Tracers::THEIR_SPHERE_TRACE)
+                        traceID = Tracers::SDF_TRACE;
+                    if (traceID == Tracers::SEGMENT_TRACE)
+                        traceID = Tracers::BDF_TRACE;
+                }
                 break;
             case Scenes::SPHERE:
                 changed |= ImGui::SliderFloat("Radius", &pPrimitiveData.y, 0.f, 8.f);
+                if (changedScene)
+                {
+                    pPrimitiveData.y = 0.7f;
+                    mpCamera->setPosition(float3(2.f, 1.25f, 1.5f));
+                    mpCamera->setTarget(float3(0, 0, 0));
+                }
                 break;
             case Scenes::BOX:
                 changed |= ImGui::SliderFloat3("Size", &pPrimitiveData.x, 0.f, 8.f);
+                if (changedScene)
+                {
+                    pPrimitiveData = float3(0.4f, 0.5f, 0.6f);
+                    mpCamera->setPosition(float3(2, 1.25, 1.5));
+                    mpCamera->setTarget(float3(0, 0, 0));
+                }
                 break;
             case Scenes::CYLINDER:
                 changed |= ImGui::SliderFloat2("R and h", &pPrimitiveData.x, 0.f, 8.f);
+                if (changedScene)
+                {
+                    pPrimitiveData.xy = float2(0.6f,0.6);
+                    mpCamera->setPosition(float3(2, 1.25, 1.5));
+                    mpCamera->setTarget(float3(0, 0, 0));
+                }
                 break;
             case Scenes::TORUS:
                 changed |= ImGui::SliderFloat2("R and r", &pPrimitiveData.x, 0.f, 8.f);
+                if (changedScene)
+                {
+                    pPrimitiveData.xy = float2(0.9f, 0.3);
+                    mpCamera->setPosition(float3(2, 1.25, 1.5));
+                    mpCamera->setTarget(float3(0, 0, 0));
+                }
                 break;
             default:
                 break;
@@ -162,6 +203,12 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
                 changed |= ImGui::SliderInt3("Repetition", &pRepeatNum.x, 0, 100);
                 changed |= ImGui::SliderFloat3("Distance", &pRepeatDist.x, 0.f, 25.f);
                 changed |= ImGui::Checkbox("Show ground plane", &pShowPlane);
+            }
+            if (changedScene && prevSceneID == Scenes::BLOBS && sceneID != Scenes::BLOBS)
+            {
+                primaryMaxIter = 256;
+                primaryMaxDist = 500.f;
+                shadowID = traceID == Tracers::SDF_TRACE ? Shadows::SDF_TRACE : Shadows::BDF_TRACE;
             }
 
             // TRACE
@@ -181,8 +228,6 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
             ImGui::PopID();
             changed |= traceChanged;
 
-            if (changedScene && sceneID == Scenes::BLOBS) primaryMaxDist = glm::min(primaryMaxDist, 60.f);
-            if (changedScene && sceneID != Scenes::BLOBS) primaryMaxDist = glm::max(primaryMaxDist, 500.f);
             changed |= ImGui::SliderInt("PRIMARY_MAXITER", &primaryMaxIter, 1, 1024);
             changed |= ImGui::SliderFloat("PRIMARY_MAXDIST", &primaryMaxDist, 1.0f, 1024.0f);
             if (traceID == Tracers::SEGMENT_TRACE || traceID == Tracers::THEIR_SPHERE_TRACE)
@@ -222,7 +267,6 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
                 changed |= ImGui::SliderFloat("SECONDARY_EPSILON", &secondaryEpsilon, 1e-15f, 1.f, "%.4f", 4.f);
                 changed |= ImGui::SliderFloat("SECONDARY_NOFFSET", &secondaryNOffset, 1e-15f, 1.f, "%.4f", 4.f);
             }
-
             // UPDATE SHADER
         }
         if (changed) {
@@ -260,8 +304,18 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
             mpMainPass->addDefine("P_PRIMITIVE_DATA", std::string("vec3(")+std::to_string(pPrimitiveData.x)+','+std::to_string(pPrimitiveData.y)+','+std::to_string(pPrimitiveData.z)+')');
             mpMainPass->addDefine("P_PLANE_ON", std::to_string(static_cast<int>(pShowPlane)));
 
+            mTestDataString = std::string("sc") +
+                kColoringRBs[reinterpret_cast<uint32_t&>(colorID)].label + '_' +
+                kColorStepFunRBs[vColoringStepFunID].label + '_' +
+                kSceneRBs[reinterpret_cast<uint32_t&>(sceneID)].label + '_' +
+                kTraceRBs[reinterpret_cast<uint32_t&>(traceID)].label + '_' +
+                kShadowRBs[reinterpret_cast<uint32_t&>(shadowID)].label + '_' +
+                std::to_string(primaryMaxIter);
+            prevSceneID = sceneID;
         }
         changed = false;
+
+        ImGui::Text(mTestDataString.c_str());
 
         settingsGroup.release();
     }
@@ -315,6 +369,26 @@ void ShaderToy_BDF::onShutdown()
 bool ShaderToy_BDF::onKeyEvent(const KeyboardEvent& keyEvent)
 {
     if (mpCameraController->onKeyEvent(keyEvent)) return true;
+
+    if (keyEvent.type == KeyboardEvent::Type::KeyReleased) return false;
+
+    switch (keyEvent.key)
+    {
+    case Input::Key::Escape:
+        return true; // stop Falcor from exiting on pressing Escape
+    case Input::Key::C:
+        if (keyEvent.hasModifier(Input::Modifier::Ctrl)) {
+            // copy model string to clipboard
+            ImGui::SetClipboardText(mTestDataString.c_str());
+            return true;
+        }
+        else {
+            // create screen capture
+            gpFramework->captureScreen(mTestDataString.c_str(), "captures");
+            return true;
+        }
+        break;
+    }
 
     return false;
 }
