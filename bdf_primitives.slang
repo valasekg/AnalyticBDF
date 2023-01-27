@@ -12,7 +12,7 @@ float bdSphere(vec3 p, float s)
     return d2 > s * s ? sqrt(d2 - s * s) : sqrt(d2) - s;
 }
 
-float bdBox(vec3 p, vec3 b)
+float bdBox1(vec3 p, vec3 b)
 {
     vec3 q = abs(p) - b;
     float d = min3( //distances to the three corners
@@ -58,7 +58,7 @@ float bdBox2(vec3 p, vec3 b)
     float s = max3(q.x, q.y, q.z);
     return s < 0. ? s : sqrt(d);
 }
-float bdBoxWIP(vec3 p, vec3 b)
+float bdBox3(vec3 p, vec3 b)
 {
     vec3 q = abs(p) - b;
     vec4 b0 = vec4(b, 0);
@@ -67,19 +67,23 @@ float bdBoxWIP(vec3 p, vec3 b)
         dot2(q + 2.*b0.wyw),
         dot2(q + 2.*b0.wwz)
     );
-    vec3 q2 = dot2(q);
+    vec3 q2 = q*q;
     int sq = int(q.x > 0) + int(q.y > 0) + int(q.z > 0);
     d = q.x <= 0 && sq == 1 ? min(d, q2.y + q2.z) : d;
     d = q.y <= 0 && sq == 1 ? min(d, q2.x + q2.z) : d;
     d = q.z <= 0 && sq == 1 ? min(d, q2.x + q2.y) : d;
+    d = q.x > 0. && sq == 1 ? min(d, dot2(q.x + b.x)) : d;
+    d = q.y > 0. && sq == 1 ? min(d, dot2(q.y + b.y)) : d;
+    d = q.z > 0. && sq == 1 ? min(d, dot2(q.z + b.z)) : d;
     d = sq == 2 ? min(d, q2.x + q2.y + q2.z) : d;
-    
-    //d = sq == 2 ? 0 : d;
-    
+        
     float s = max3(q.x, q.y, q.z);
     return s < 0. ? s : sqrt(d);
 }
-
+float bdBox(vec3 p,vec3 b)
+{
+    return bdBox3(p, b);
+}
 
 float bdCylinder(vec3 p, float r) // Infinite
 {
@@ -93,10 +97,10 @@ float bdCylinder(vec3 p, float _r, float _h)
     vec2 q = vec2(r, abs(p.y)) - vec2(_r, _h);
     float d = dot2(vec2(max(q.x, 0.), q.y + 2. * _h));
     d = q.x >= 0. && q.y >= 0. ? d : min(d,
-          dot2(q)
+          .95*dot2(q)
       );
     d = q.x <= 0. ? d : min(d,
-          dot2(vec2(r, max(q.y, 0.))) - _r * _r
+          1.0*(dot2(vec2(r, max(q.y, 0.))) - _r * _r)
       );
     float s = max(q.x, q.y);
     return s < 0. ? s : sqrt(d);

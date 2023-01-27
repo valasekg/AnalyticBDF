@@ -44,8 +44,8 @@ namespace {
     Gui::RadioButtonGroup kColorStepFunRBs = { {0,"Old",true},{1,"HSV",true},{2,"2",true},{3,"3",true},{4,"4",true} };
 
     Gui::RadioButtonGroup kSceneRBs = { {0,"Blobs", true}, {1,"Primitives", true},
-        {2,"Sphere", true}, {3,"Box", true}, {4,"Cylinder", true}, {5,"Torus", true}};
-    enum class Scenes : uint32_t {BLOBS = 0, PRIMITIVES = 1, SPHERE = 2, BOX = 3, CYLINDER = 4, TORUS = 5};
+        {2,"Sphere", true}, {3,"Box", true}, {4,"Cylinder", true}, {5,"Torus", true}, {6,"Test", true} };
+    enum class Scenes : uint32_t {BLOBS = 0, PRIMITIVES = 1, SPHERE = 2, BOX = 3, CYLINDER = 4, TORUS = 5,TEST = 6};
 
     Gui::RadioButtonGroup kTraceRBs = { {0,"sdf_trace", true}, {1,"bdf_trace", true},{2,"segment_trace",true},{3,"their_sphere_trace",true} };
     enum class Tracers : uint32_t {SDF_TRACE = 0, BDF_TRACE = 1, SEGMENT_TRACE = 2, THEIR_SPHERE_TRACE = 3};
@@ -110,6 +110,7 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
         static float sThreshold = .5f;
         static float sBlobRadius = 4.f;
         static float3 pPrimitiveData = float3(1);
+        static float3 pTestPos = float3(0);
         static int3 pRepeatNum = int3(1000, 0, 1000);
         static float3 pRepeatDist = float3(4);
         static bool pShowPlane = true;
@@ -191,6 +192,16 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
                 if (changedScene)
                 {
                     pPrimitiveData.xy = float2(0.9f, 0.3);
+                    mpCamera->setPosition(float3(2, 1.25, 1.5));
+                    mpCamera->setTarget(float3(0, 0, 0));
+                }
+                break;
+            case Scenes::TEST:
+                changed |= ImGui::SliderFloat3("Size", &pPrimitiveData.x, 0.f, 8.f);
+                changed |= ImGui::SliderFloat3("TestPos", &pTestPos.x, 0.f, 8.f);
+                if (changedScene)
+                {
+                    pPrimitiveData = float3(0.4f, 0.5f, 0.6f);
                     mpCamera->setPosition(float3(2, 1.25, 1.5));
                     mpCamera->setTarget(float3(0, 0, 0));
                 }
@@ -301,7 +312,8 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
             mpMainPass->addDefine("P_REPEAT_Y_NUM", std::to_string(pRepeatNum.y));
             mpMainPass->addDefine("P_REPEAT_Z_NUM", std::to_string(pRepeatNum.z));
             mpMainPass->addDefine("P_REPEAT_DIST", std::string("vec3(")+std::to_string(pRepeatDist.x)+','+std::to_string(pRepeatDist.y)+','+std::to_string(pRepeatDist.z)+')');
-            mpMainPass->addDefine("P_PRIMITIVE_DATA", std::string("vec3(")+std::to_string(pPrimitiveData.x)+','+std::to_string(pPrimitiveData.y)+','+std::to_string(pPrimitiveData.z)+')');
+            mpMainPass->addDefine("P_PRIMITIVE_DATA", std::string("vec3(") + std::to_string(pPrimitiveData.x) + ',' + std::to_string(pPrimitiveData.y) + ',' + std::to_string(pPrimitiveData.z) + ')');
+            mpMainPass->addDefine("P_TEST_POS", std::string("vec3(") + std::to_string(pTestPos.x) + ',' + std::to_string(pTestPos.y) + ',' + std::to_string(pTestPos.z) + ')');
             mpMainPass->addDefine("P_PLANE_ON", std::to_string(static_cast<int>(pShowPlane)));
 
             mTestDataString = std::string("sc") +

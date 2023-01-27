@@ -61,5 +61,9 @@ float dot2(vec3 a)
 {
     return dot(a, a);
 }
+float dot2(float a)
+{
+    return a*a;
+}
 
 #endif

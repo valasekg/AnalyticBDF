@@ -101,6 +101,18 @@ float bdPlaneAdd(float d, vec3 p)
 #endif
 }
 
+float sdTest(vec3 p)
+{
+    float d = 1e+10;
+    float r = bdBox(P_TEST_POS, P_PRIMITIVE_DATA.xyz);
+    d = min(sdBox(p, P_PRIMITIVE_DATA.xyz), d);
+    d = min(d, sdSphere(p - P_TEST_POS, r));
+    return sdPlaneAdd(d, p);
+}
+float bdTest(vec3 p) {
+    return sdTest(p);
+}
+
 float sdSphere(vec3 p)
 {
     return sdPlaneAdd(sdSphere(repetition(p), P_PRIMITIVE_DATA.y), p);

@@ -21,6 +21,7 @@
 // Orimitive parameters
 
 #define P_PRIMITIVE_DATA vec3(1)
+#define P_TEST_POS vec3(0)
 #define P_REPEAT_X_NUM  3
 #define P_REPEAT_Y_NUM  0
 #define P_REPEAT_Z_NUM  3
