@@ -12,7 +12,7 @@ float bdSphere(vec3 p, float s)
     return d2 > s * s ? sqrt(d2 - s * s) : sqrt(d2) - s;
 }
 
-float bdBox1(vec3 p, vec3 b)
+float bdBoxOlder(vec3 p, vec3 b)
 {
     vec3 q = abs(p) - b;
     float d = min3( //distances to the three corners
@@ -35,7 +35,7 @@ float bdBox1(vec3 p, vec3 b)
     return s < 0. ? s : sqrt(d);
 }
 
-float bdBox2(vec3 p, vec3 b)
+float bdBoxOldish(vec3 p, vec3 b)
 {
     vec3 q = abs(p) - b;
     float d = min3( // minimum distance to face-diagonal vertices
@@ -58,28 +58,38 @@ float bdBox2(vec3 p, vec3 b)
     float s = max3(q.x, q.y, q.z);
     return s < 0. ? s : sqrt(d);
 }
-float bdBox3(vec3 p, vec3 b)
-{
+
+float bdBox1(vec3 p, vec3 b)
+{ // optimized
     vec3 q = abs(p) - b;
-    vec4 b0 = vec4(b, 0);
-    float d = min3(
-        dot2(q + 2.*b0.xww),
-        dot2(q + 2.*b0.wyw),
-        dot2(q + 2.*b0.wwz)
-    );
-    vec3 q2 = q*q;
-    int sq = int(q.x > 0) + int(q.y > 0) + int(q.z > 0);
-    d = q.x <= 0 && sq == 1 ? min(d, q2.y + q2.z) : d;
-    d = q.y <= 0 && sq == 1 ? min(d, q2.x + q2.z) : d;
-    d = q.z <= 0 && sq == 1 ? min(d, q2.x + q2.y) : d;
-    d = q.x > 0. && sq == 1 ? min(d, dot2(q.x + b.x)) : d;
-    d = q.y > 0. && sq == 1 ? min(d, dot2(q.y + b.y)) : d;
-    d = q.z > 0. && sq == 1 ? min(d, dot2(q.z + b.z)) : d;
-    d = sq == 2 ? min(d, q2.x + q2.y + q2.z) : d;
-        
+    vec3 q2 = max(q, 0.) * q;
+    float  d = q2.y + q2.z + dot2(q.x + (q.x < 0. ? 0. : 2. * b.x));
+    d = min(d, q2.z + q2.x + dot2(q.y + (q.y < 0. ? 0. : 2. * b.y)));
+    d = min(d, q2.x + q2.y + dot2(q.z + (q.z < 0. ? 0. : 2. * b.z)));
     float s = max3(q.x, q.y, q.z);
     return s < 0. ? s : sqrt(d);
 }
+float bdBox2(vec3 p, vec3 b)
+{ // optimized
+    vec3 q = abs(p) - b;
+    float qq = dot2(q);
+    vec3 tmp = 2. * vec3(q >= 0.) * b;
+    vec3 q2 = max(q, 0.) * q;
+    float  d = q2.y + q2.z + dot2(q.x + tmp.x);
+    d = min(d, q2.z + q2.x + dot2(q.y + tmp.y));
+    d = min(d, q2.x + q2.y + dot2(q.z + tmp.z));
+    float s = max3(q.x, q.y, q.z);
+    return s < 0. ? s : sqrt(d);
+}
+
+float bdBox3(vec3 p, vec3 b) { // optimized
+    vec3 q = abs(p) - b;
+    vec3 b2q = 2. * vec3(q > 0.) * b + q;
+    vec3 q2 = max(q, 0.) * q;
+    float s = max3(q);
+    return s < 0. ? s : sqrt(min3(q2.yzx + q2.zxy + b2q*b2q));
+}
+
 float bdBox(vec3 p,vec3 b)
 {
     return bdBox3(p, b);
@@ -97,10 +107,10 @@ float bdCylinder(vec3 p, float _r, float _h)
     vec2 q = vec2(r, abs(p.y)) - vec2(_r, _h);
     float d = dot2(vec2(max(q.x, 0.), q.y + 2. * _h));
     d = q.x >= 0. && q.y >= 0. ? d : min(d,
-          .95*dot2(q)
+          .95 * dot2(q)
       );
     d = q.x <= 0. ? d : min(d,
-          1.0*(dot2(vec2(r, max(q.y, 0.))) - _r * _r)
+          1.0 * (dot2(vec2(r, max(q.y, 0.))) - _r * _r)
       );
     float s = max(q.x, q.y);
     return s < 0. ? s : sqrt(d);

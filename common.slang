@@ -46,10 +46,18 @@ float min3(float a, float b, float c)
 {
     return min(min(a, b), c);
 }
+float min3(vec3 a)
+{
+    return min(a.x, min(a.y, a.z));
+}
 
 float max3(float a, float b, float c)
 {
     return max(max(a, b), c);
+}
+float max3(vec3 a)
+{
+    return max(a.x, max(a.y, a.z));
 }
 
 float dot2(vec2 a)
