@@ -161,7 +161,7 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
                 }
                 break;
             case Scenes::SPHERE:
-                changed |= ImGui::SliderFloat("Radius", &pPrimitiveData.y, 0.f, 8.f);
+                changed |= ImGui::SliderFloat("Radius", &pPrimitiveData.y, 0.f, 4.f);
                 if (changedScene)
                 {
                     pPrimitiveData.y = 0.7f;
@@ -170,7 +170,7 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
                 }
                 break;
             case Scenes::BOX:
-                changed |= ImGui::SliderFloat3("Size", &pPrimitiveData.x, 0.f, 8.f);
+                changed |= ImGui::SliderFloat3("Size", &pPrimitiveData.x, 0.f, 4.f);
                 if (changedScene)
                 {
                     pPrimitiveData = float3(0.4f, 0.5f, 0.6f);
@@ -179,7 +179,7 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
                 }
                 break;
             case Scenes::CYLINDER:
-                changed |= ImGui::SliderFloat2("R and h", &pPrimitiveData.x, 0.f, 8.f);
+                changed |= ImGui::SliderFloat2("R and h", &pPrimitiveData.x, 0.f, 4.f);
                 if (changedScene)
                 {
                     pPrimitiveData.xy = float2(0.6f,0.6);
@@ -188,7 +188,7 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
                 }
                 break;
             case Scenes::TORUS:
-                changed |= ImGui::SliderFloat2("R and r", &pPrimitiveData.x, 0.f, 8.f);
+                changed |= ImGui::SliderFloat2("R and r", &pPrimitiveData.x, 0.f, 4.f);
                 if (changedScene)
                 {
                     pPrimitiveData.xy = float2(0.9f, 0.3);
@@ -197,8 +197,8 @@ void ShaderToy_BDF::onGuiRender(Gui* pGui)
                 }
                 break;
             case Scenes::TEST:
-                changed |= ImGui::SliderFloat3("Size", &pPrimitiveData.x, 0.f, 8.f);
-                changed |= ImGui::SliderFloat3("TestPos", &pTestPos.x, 0.f, 8.f);
+                changed |= ImGui::SliderFloat3("Size", &pPrimitiveData.x, 0.f, 4.f);
+                changed |= ImGui::SliderFloat3("TestPos", &pTestPos.x, 0.f, 4.f);
                 if (changedScene)
                 {
                     pPrimitiveData = float3(0.4f, 0.5f, 0.6f);
@@ -341,7 +341,7 @@ void ShaderToy_BDF::onLoad(RenderContext* pRenderContext)
     mpCamera->setPosition(float3(0, 2, -4));
     mpCamera->setTarget(float3(0, 1, 0));
     mpCameraController = FirstPersonCameraController::create(mpCamera);
-    mpCameraController->setCameraSpeed(5.f);
+    mpCameraController->setCameraSpeed(8.f);
     mpCameraController->update();
     mpCamera->beginFrame();
 
@@ -408,7 +408,11 @@ bool ShaderToy_BDF::onKeyEvent(const KeyboardEvent& keyEvent)
 
 bool ShaderToy_BDF::onMouseEvent(const MouseEvent& mouseEvent)
 {
-    mpCameraController->onMouseEvent(mouseEvent);
+    MouseEvent mev = mouseEvent;
+    mev.pos = 4.f * mouseEvent.pos;
+    mpCameraController->onMouseEvent(mev);
+
+
     static float mIsAnyButtonDown = -1.f; // float
     static float2 mMouseClickPos = float2(0);
     static float2 mMouseDragPos = float2(0);
